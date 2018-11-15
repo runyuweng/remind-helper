@@ -1,6 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
+const dependency = require('./src/dependency')
+const git = require('./src/git')
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -17,7 +19,9 @@ function activate(context) {
         // The code you place here will be executed every time your command is executed
 
         // Display a message box to the user
-        vscode.window.showInformationMessage('Hello World!');
+        const Dependency = new dependency();
+        Dependency.init();
+        vscode.window.showInformationMessage('remind-helper 已启用!');
     });
 
     context.subscriptions.push(disposable);
