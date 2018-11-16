@@ -17,7 +17,7 @@
         "commands": [
             {
                 "command": "extension.start",
-                "title": "Remind Helper"
+                "title": "remind-helper"
             }
         ]
     },
