@@ -15,13 +15,14 @@ function activate(context) {
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with  registerCommand
     // The commandId parameter must match the command field in package.json
-    let disposable = vscode.commands.registerCommand('extension.sayHello', function () {
-        // The code you place here will be executed every time your command is executed
+    let disposable = vscode.commands.registerCommand('extension.start', function () {
+        vscode.window.showInformationMessage('remind-helper 已启用 👌');
 
-        // Display a message box to the user
         const Dependency = new dependency();
         Dependency.init();
-        vscode.window.showInformationMessage('remind-helper 已启用!');
+
+        const Git = new git();
+        Git.init()
     });
 
     context.subscriptions.push(disposable);

@@ -10,14 +10,14 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.sayHello"
+        "onCommand:extension.start"
     ],
     "main": "./extension",
     "contributes": {
         "commands": [
             {
-                "command": "extension.sayHello",
-                "title": "Hello World"
+                "command": "extension.start",
+                "title": "Remind Helper"
             }
         ]
     },
@@ -34,6 +34,7 @@
     },
     "dependencies": {
         "chokidar": "^2.0.4",
-        "semver": "^5.6.0"
+        "semver": "^5.6.0",
+        "simple-git": "^1.107.0"
     }
 }
