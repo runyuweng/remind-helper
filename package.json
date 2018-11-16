@@ -3,6 +3,7 @@
     "displayName": "remind-helper",
     "description": "",
     "version": "0.0.1",
+    "publisher": "wengrunyu",
     "engines": {
         "vscode": "^1.29.0"
     },
