@@ -1,7 +1,7 @@
 {
     "name": "remind-helper",
     "displayName": "remind-helper",
-    "description": "",
+    "description": "plugin to help people check dependences difference between local to origin master",
     "version": "0.0.1",
     "publisher": "wengrunyu",
     "engines": {
@@ -13,7 +13,7 @@
     "activationEvents": [
         "onCommand:extension.start"
     ],
-    "main": "./extension",
+    "main": "./src",
     "contributes": {
         "commands": [
             {

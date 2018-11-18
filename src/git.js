@@ -9,7 +9,12 @@ git.prototype.init = function() {
   this.loopFetch();
 }
 
+git.prototype.destory = function() {
+  this.timer && clearTimeout(this.timer);
+}
+
 git.prototype.loopFetch = function() {
+  this.timer && clearTimeout(this.timer);
   this.timer = setTimeout(() => {
     this.fetch();
     this.loopFetch();
@@ -24,6 +29,7 @@ git.prototype.fetch = function() {
   ], (err) => {
     if (err) {
       console.error(err);
+      return
     }
     this.getLatestCommitFromMaster()
   });
@@ -37,9 +43,9 @@ git.prototype.getLatestCommitFromMaster = function() {
   ], (err, str) => {
     if (err) {
       console.error(err);
+      return
     }
     this.commitId = str.match(/commit (\S*)/)[1].trim();
-    this.updateTime = str.match(/Date:   (.*)/)[1].trim();
     this.checkIsMergedMaster()
   });
 }
@@ -53,6 +59,7 @@ git.prototype.checkIsMergedMaster = function() {
   ], (err, str) => {
     if (err) {
       console.error(err);
+      return
     }
     const hasMergedMaster = str.indexOf(this.commitId) > -1;
     if (!hasMergedMaster) {
