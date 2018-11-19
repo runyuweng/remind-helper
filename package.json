@@ -2,7 +2,7 @@
     "name": "remind-helper",
     "displayName": "remind-helper",
     "description": "plugin to help people check dependences difference between local and origin master",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "publisher": "wengrunyu",
     "engines": {
         "vscode": "^1.29.0"
