@@ -1,13 +1,13 @@
 {
     "name": "remind-helper",
     "displayName": "remind-helper",
-    "description": "plugin to help people check dependences difference between local to origin master",
+    "description": "plugin to help people check dependences difference between local and origin master",
     "version": "0.0.2",
     "publisher": "wengrunyu",
     "engines": {
         "vscode": "^1.29.0"
     },
-    "icon": "https://p0.meituan.net/scarlett/33de69f9b947b3acdf375588e27a1fc4139410.png",
+    "icon": "images/icon.png",
     "categories": [
         "Other"
     ],
@@ -39,5 +39,13 @@
         "lodash": "^4.17.11",
         "semver": "^5.6.0",
         "simple-git": "^1.107.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wengwengweng/remind-helper.git"
+    },
+    "bugs": {
+        "url": "https://github.com/wengwengweng/remind-helper/issues",
+        "email": "593110501@qq.com"
     }
 }

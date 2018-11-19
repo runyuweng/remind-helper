@@ -19,7 +19,7 @@ dependency.prototype.init = function() {
 }
 
 dependency.prototype.checkAll = function() {
-  console.log('watch some file changed, start to check')
+  console.log('start to check')
   this.getAllDependencies();
   this.checkIdentical();
 }
