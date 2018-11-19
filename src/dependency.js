@@ -25,16 +25,6 @@ dependency.prototype.checkAll = function() {
 }
 
 dependency.prototype.watchFileChange = function() {
-  chokidar.watch(modulePath, {
-    ignoreInitial: true,
-    ignored: [
-      new RegExp(modulePath+'/*.'),
-    ]
-  })
-  .on('addDir', () => { this.checkAll(); })
-  .on('unlinkDir', () => { this.checkAll(); })
-  .on('error', error => console.log(`Watcher error: ${error}`))
-
   chokidar.watch([
     jsonPath,
     lockJsonPath,
