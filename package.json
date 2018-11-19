@@ -7,18 +7,19 @@
     "engines": {
         "vscode": "^1.29.0"
     },
+    "icon": "https://p0.meituan.net/scarlett/33de69f9b947b3acdf375588e27a1fc4139410.png",
     "categories": [
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.start"
+        "*"
     ],
     "main": "./src",
     "contributes": {
         "commands": [
             {
-                "command": "extension.start",
-                "title": "remind-helper"
+                "command": "extension.check",
+                "title": "check now"
             }
         ]
     },
@@ -35,6 +36,7 @@
     },
     "dependencies": {
         "chokidar": "^2.0.4",
+        "lodash": "^4.17.11",
         "semver": "^5.6.0",
         "simple-git": "^1.107.0"
     }

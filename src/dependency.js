@@ -2,6 +2,7 @@ const vscode = require('vscode');
 const semver = require('semver')
 const fs = require('fs');
 const chokidar = require('chokidar');
+const _ = require('lodash')
 
 const jsonPath = vscode.workspace.rootPath + '/package.json';
 const lockJsonPath = vscode.workspace.rootPath + '/package-lock.json';
@@ -9,6 +10,7 @@ const modulePath = vscode.workspace.rootPath + '/node_modules';
 
 const dependency = function() {
   this.allDependencies = [];
+  this.checkAll = _.debounce(this.checkAll, 600);
 }
 
 dependency.prototype.init = function() {
@@ -17,18 +19,28 @@ dependency.prototype.init = function() {
 }
 
 dependency.prototype.checkAll = function() {
+  console.log('watch some file changed, start to check')
   this.getAllDependencies();
   this.checkIdentical();
 }
 
 dependency.prototype.watchFileChange = function() {
+  chokidar.watch(modulePath, {
+    ignoreInitial: true,
+    ignored: [
+      new RegExp(modulePath+'/*.'),
+    ]
+  })
+  .on('addDir', () => { this.checkAll(); })
+  .on('unlinkDir', () => { this.checkAll(); })
+  .on('error', error => console.log(`Watcher error: ${error}`))
+
   chokidar.watch([
     jsonPath,
     lockJsonPath,
   ], {
     ignoreInitial: true
-  }).on('all', (event, path) => {
-    console.log('file Change:', event, path)
+  }).on('all', () => {
     this.checkAll();
   }).on('error', error => console.log(`Watcher error: ${error}`))
 }
@@ -90,7 +102,7 @@ dependency.prototype.checkIdentical = function() {
     if (isEqual) {
       return true;
     }
-    vscode.window.showWarningMessage(`${name} 包在 package-lock.json 文件中的版本与 node_modules 中实际安装的不一致 🤔`);
+    vscode.window.showWarningMessage(`${name} 包在 package-lock.json 文件中的版本与 node_modules 中实际安装的不一致`);
     return false;
   })
 }

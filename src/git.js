@@ -63,7 +63,7 @@ git.prototype.checkIsMergedMaster = function() {
     }
     const hasMergedMaster = str.indexOf(this.commitId) > -1;
     if (!hasMergedMaster) {
-      vscode.window.showWarningMessage('master分支更新了，请及时合并 😊');
+      vscode.window.showWarningMessage('master分支更新了，请及时合并');
     }
   });
 }
