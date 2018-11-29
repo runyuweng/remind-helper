@@ -5,3 +5,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 - Initial release
+
+## [0.0.5] - 2018-11-29
+### Fixed
+- Downgraded event-stream version with malicious code which is vscode based on.
