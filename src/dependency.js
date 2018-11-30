@@ -2,98 +2,134 @@ const vscode = require('vscode');
 const semver = require('semver')
 const fs = require('fs');
 const chokidar = require('chokidar');
-const _ = require('lodash')
+const lockfile = require('@yarnpkg/lockfile');
+const { TYPE_MAPPING } = require('./utils/constants');
 
-const jsonPath = vscode.workspace.rootPath + '/package.json';
-const lockJsonPath = vscode.workspace.rootPath + '/package-lock.json';
-const modulePath = vscode.workspace.rootPath + '/node_modules';
+const ROOT_PATH = vscode.workspace.rootPath;
 
-const dependency = function() {
-  this.allDependencies = [];
-  this.checkAll = _.debounce(this.checkAll, 600);
+const jsonPath = ROOT_PATH + '/package.json';
+const packageLockJsonPath = ROOT_PATH + '/package-lock.json';
+const yarnLockPath = ROOT_PATH + '/yarn.lock';
+const modulePath = ROOT_PATH + '/node_modules';
+
+function transferPathToJson(path) {
+  let data = {};
+  try {
+    data = JSON.parse(fs.readFileSync(path, 'utf-8'));
+  } catch (err) {
+    console.error(err);
+  }
+  return data;
 }
 
+const dependency = function() {}
+
 dependency.prototype.init = function() {
-  this.checkAll();
+  this.checkAll(packageLockJsonPath, TYPE_MAPPING.PACKAGE_LOCK);
+  this.checkAll(yarnLockPath, TYPE_MAPPING.YARN_LOCK);
   this.watchFileChange();
 }
 
-dependency.prototype.checkAll = function() {
-  console.log('start to check')
-  this.getAllDependencies();
-  this.checkIdentical();
+dependency.prototype.watch = function(lockPath, type) {
+  chokidar.watch([
+    jsonPath,
+    lockPath,
+  ], {
+    ignoreInitial: true,
+  }).on('all', () => {
+    this.checkAll(lockPath, type);
+  }).on('error', error => console.log(`Watcher error: ${error}`));
 }
 
 dependency.prototype.watchFileChange = function() {
-  chokidar.watch([
-    jsonPath,
-    lockJsonPath,
-  ], {
-    ignoreInitial: true
-  }).on('all', () => {
-    this.checkAll();
-  }).on('error', error => console.log(`Watcher error: ${error}`))
+  // 监听package-lock.json的变化
+  this.watch(packageLockJsonPath, TYPE_MAPPING.PACKAGE_LOCK);
+
+  // 监听yarn.lock的变化
+  this.watch(yarnLockPath, TYPE_MAPPING.YARN_LOCK);
 }
 
-dependency.prototype.getAllDependencies = function() {
-  // 当前目录下有package.json, package-lock.json, node_modules才会进行检查
-  const isExist = fs.existsSync(jsonPath) && fs.existsSync(lockJsonPath) && fs.existsSync(modulePath);
-  if (!isExist) {
-    return;
+dependency.prototype.checkAll = function(lockPath, type) {
+  console.log('this.checkAll');
+  const allDependencies = this.getAllDependencies(lockPath, type);
+  this.checkIdentical(allDependencies, type);
+}
+
+// 不管是yarn.lock还是package-lock.json都统一成package-lock.json处理
+dependency.prototype.unifiedToPackageLock = function(lockPath, type) {
+  let data = {};
+
+  if (type === TYPE_MAPPING.PACKAGE_LOCK) {
+    data = transferPathToJson(lockPath);
   }
 
-  let json = {};
-  try {
-    json = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-  } catch (err) {
-    console.error(err)
+  if (type === TYPE_MAPPING.YARN_LOCK) {
+    const { object } = lockfile.parse(fs.readFileSync(lockPath, 'utf8'));
+    const dependencies = {};
+    Object.keys(object).forEach(d => {
+      dependencies[d.replace(/(.*)(@.*)$/, '$1' )] = object[d];
+    });
+    data.dependencies = dependencies;
   }
-  
-  let lockJson = {};
-  try {
-    lockJson = JSON.parse(fs.readFileSync(lockJsonPath, 'utf-8'));
-  } catch (err) {
-    console.error(err)
+
+  return data;
+}
+
+dependency.prototype.getAllDependencies = function(lockPath, type) {
+  // 当前目录下有package.json, package-lock.json, node_modules才会进行检查
+  const allDependenciesArr = [];
+
+  const isExist = fs.existsSync(jsonPath) &&
+    fs.existsSync(lockPath) &&
+    fs.existsSync(modulePath);
+
+  if (!isExist) {
+    return allDependenciesArr;
   }
+
+  let json = transferPathToJson(jsonPath);
+  let lockJson = this.unifiedToPackageLock(lockPath, type);
 
   // 在package-lock.json中找到package.json对应的版本
   const { dependencies = {}, devDependencies = {} } = json;
   const { dependencies: lockDependencies = {} } = lockJson;
   const allDependenciesObj = Object.assign(devDependencies, dependencies);
-  this.allDependencies = [];
   Object.keys(allDependenciesObj).forEach(d => {
-    this.allDependencies.push({
+    allDependenciesArr.push({
       name: d,
-      version: lockDependencies[d] && lockDependencies[d].version
+      version: lockDependencies[d] && lockDependencies[d].version,
     });
   })
+  return allDependenciesArr;
 }
 
-dependency.prototype.checkIdentical = function() {
-  this.allDependencies.every(d => {
-    const { name, version } = d;
-    const modulePath = `${vscode.workspace.rootPath}/node_modules/${name}/package.json`;
-    const moduleIsExist = fs.existsSync(modulePath);
-    if (!moduleIsExist) {
-      return false;
-    }
-    let json = {};
+dependency.prototype.checkIdentical = function(allDependencies, type) {
+  const errorMessages = [];
+  allDependencies.forEach(item => {
+    const { name, version } = item;
+    const itemModulePath = `${ROOT_PATH}/node_modules/${name}/package.json`;
+    let itemModuleJson = transferPathToJson(itemModulePath);
+    let isEqual = false;
+
     try {
-      json = JSON.parse(fs.readFileSync(modulePath, 'utf-8'));
+      isEqual = semver.eq(itemModuleJson.version, version);
     } catch (err) {
       console.error(err)
     }
-    let isEqual = false
-    try {
-      isEqual = semver.eq(json.version, version);
-    } catch (err) {
-      console.error(err)
+  
+    if (!isEqual) {
+      errorMessages.push({
+        name,
+        shouldInstallVersion: version,
+        actualInsallVersion: itemModuleJson.version,
+        message: `${name} 包在 ${type} 文件中的版本为 ${version} 与 node_modules 中实际安装的 ${itemModuleJson.version} 版本不一致`,
+      })
     }
-    if (isEqual) {
-      return true;
-    }
-    vscode.window.showWarningMessage(`${name} 包在 package-lock.json 文件中的版本与 node_modules 中实际安装的不一致`);
-    return false;
+  })
+  errorMessages.length && errorMessages.forEach(d => {
+    vscode.window.showInformationMessage(d.message, '与lock同步', '忽略').then(select => {
+      console.log(d, select)
+    });
   })
 }
 
