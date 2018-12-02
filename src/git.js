@@ -1,12 +1,41 @@
 
 const vscode = require('vscode');
+const chokidar = require('chokidar');
+const _ = require('lodash')
 const simpleGit = require('simple-git')(vscode.workspace.rootPath);
+const ROOT_PATH = vscode.workspace.rootPath;
 
-const git = function() {}
+const GIT_PATH = ROOT_PATH + '/.git';
+const GIT_BRANCH_PATH = ROOT_PATH + '/.git/HEAD';
+const GIT_ADD_PATH = ROOT_PATH + '/.git/index';
+const GIT_COMMIT_PATH = ROOT_PATH + '/.git/COMMIT_EDITMSG';
 
-git.prototype.init = function() {
+const git = function() {
+  this.check = _.debounce(this.check, 100);
+}
+
+git.prototype.check = function() {
   this.fetch();
   this.loopFetch();
+}
+/**
+ * @method watch
+ */
+git.prototype.watchGitEvent = function() {
+  chokidar.watch([
+    GIT_BRANCH_PATH,
+    GIT_ADD_PATH,
+    GIT_COMMIT_PATH,
+  ], {
+    ignoreInitial: true,
+  }).on('all', () => {
+    this.check();
+  }).on('error', error => console.log(`Watcher error: ${error}`));
+}
+
+git.prototype.init = function() {
+  this.check();
+  this.watchGitEvent();
 }
 
 git.prototype.destory = function() {
@@ -16,9 +45,8 @@ git.prototype.destory = function() {
 git.prototype.loopFetch = function() {
   this.timer && clearTimeout(this.timer);
   this.timer = setTimeout(() => {
-    this.fetch();
-    this.loopFetch();
-  }, 60 * 60 * 1000)
+    this.check();
+  }, 30 * 60 * 1000)
 }
 
 git.prototype.fetch = function() {

@@ -3,9 +3,8 @@ const semver = require('semver')
 const fs = require('fs');
 const chokidar = require('chokidar');
 const lockfile = require('@yarnpkg/lockfile');
-const { exec } = require('child_process');
 const {
-  TYPE_MAPPING, NPM_UPDATE_SCRIPT, YARN_UPDATE_SCRIPT
+  TYPE_MAPPING
 } = require('./utils/constants');
 
 const ROOT_PATH = vscode.workspace.rootPath;
@@ -84,7 +83,27 @@ function unifiedToPackageLock(lockPath, type) {
     const { object } = lockfile.parse(fs.readFileSync(lockPath, 'utf8'));
     const dependencies = {};
     Object.keys(object).forEach(d => {
-      dependencies[d.replace(/(.*)(@.*)$/, '$1' )] = object[d];
+      const key = d.replace(/(.*)(@.*)$/, '$1');
+      const versionRangeInName = d.match(/(.*@)(.*)$/)[2];
+      let versionInName;
+      // yarn.lock中可能一个包出现多次，这种情况选用较低的一个版本
+      // '>=4.0.3 <5.0.0' || '>=0.5.0 >=0.0.0 <1.0.0'
+      if (semver.validRange(versionRangeInName).match(/^>=(.+?) .*/)) {
+        versionInName = semver.validRange(versionRangeInName).match(/^>=(.+?) .*/)[1];
+      // '>=4.0.3'
+      } else if (semver.validRange(versionRangeInName).match(/^>=(.*)/)) {
+        versionInName = semver.validRange(versionRangeInName).match(/^>=(.*)/)[1];
+      // '1.1.1'
+      } else {
+        versionInName = versionRangeInName;
+      }
+      if (dependencies[key]) {
+        if (semver.lt(versionInName, dependencies[key].versionInName)) {
+          dependencies[key] = Object.assign(object[d], { versionInName })
+        }
+      } else {
+        dependencies[key] = Object.assign(object[d], { versionInName })
+      }
     });
     data.dependencies = dependencies;
   }
@@ -151,42 +170,9 @@ function checkIdentical(allDependencies, type) {
       })
     }
   })
-  messages.length && messages.forEach((d, index) => {
-    if (index === messages.length - 1) {
-      const UPDATE_TEXT = `将所有包更新至${type}文件中定义的版本`;
-      vscode.window.showWarningMessage(d.message, UPDATE_TEXT, '忽略').then(select => {
-        if (select === UPDATE_TEXT) {
-          updateVersion(type)
-        }
-      });
-      return
-    }
+  messages.length && messages.forEach((d) => {
     vscode.window.showWarningMessage(d.message);
   })
-}
-
-/**
- * @method updateVersion
- * @param type {string} package-lock.json or yarn.lock
- */
-function updateVersion(type) {
-  let script = '';
-  if (type === TYPE_MAPPING.PACKAGE_LOCK) {
-    script = NPM_UPDATE_SCRIPT;
-  }
-  if (type === TYPE_MAPPING.YARN_LOCK) {
-    script = YARN_UPDATE_SCRIPT;
-  }
-  exec(script, { cwd: ROOT_PATH }, (err, stdout) => {
-    if (err) {
-      vscode.window.showErrorMessage('同步失败请手动尝试')
-      console.error(err);
-      return;
-    }
-    console.log(stdout);
-    vscode.window.showInformationMessage(`所有包已更新至${type}文件中定义的版本`);
-    checkAll(packageLockJsonPath, type);
-  });
 }
 
 const dependency = function() {}
