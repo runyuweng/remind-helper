@@ -37,6 +37,7 @@
     "dependencies": {
         "@yarnpkg/lockfile": "^1.1.0",
         "chokidar": "^2.0.4",
+        "lodash": "^4.17.11",
         "semver": "^5.6.0",
         "simple-git": "^1.107.0"
     },

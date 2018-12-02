@@ -5,7 +5,6 @@ const _ = require('lodash')
 const simpleGit = require('simple-git')(vscode.workspace.rootPath);
 const ROOT_PATH = vscode.workspace.rootPath;
 
-const GIT_PATH = ROOT_PATH + '/.git';
 const GIT_BRANCH_PATH = ROOT_PATH + '/.git/HEAD';
 const GIT_ADD_PATH = ROOT_PATH + '/.git/index';
 const GIT_COMMIT_PATH = ROOT_PATH + '/.git/COMMIT_EDITMSG';
