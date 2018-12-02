@@ -3,7 +3,10 @@ const semver = require('semver')
 const fs = require('fs');
 const chokidar = require('chokidar');
 const lockfile = require('@yarnpkg/lockfile');
-const { TYPE_MAPPING } = require('./utils/constants');
+const { exec } = require('child_process');
+const {
+  TYPE_MAPPING, NPM_UPDATE_SCRIPT, YARN_UPDATE_SCRIPT
+} = require('./utils/constants');
 
 const ROOT_PATH = vscode.workspace.rootPath;
 
@@ -12,6 +15,11 @@ const packageLockJsonPath = ROOT_PATH + '/package-lock.json';
 const yarnLockPath = ROOT_PATH + '/yarn.lock';
 const modulePath = ROOT_PATH + '/node_modules';
 
+/**
+ * @method transferPathToJson
+ * @param path {string} path
+ * @return {Object} json
+ */
 function transferPathToJson(path) {
   let data = {};
   try {
@@ -22,41 +30,50 @@ function transferPathToJson(path) {
   return data;
 }
 
-const dependency = function() {}
-
-dependency.prototype.init = function() {
-  this.checkAll(packageLockJsonPath, TYPE_MAPPING.PACKAGE_LOCK);
-  this.checkAll(yarnLockPath, TYPE_MAPPING.YARN_LOCK);
-  this.watchFileChange();
-}
-
-dependency.prototype.watch = function(lockPath, type) {
+/**
+ * @method watch
+ * @param lockPath {string} lock file path
+ * @param type {string} package-lock.json or yarn.lock
+ */
+function watch(lockPath, type) {
   chokidar.watch([
     jsonPath,
     lockPath,
   ], {
     ignoreInitial: true,
   }).on('all', () => {
-    this.checkAll(lockPath, type);
+    checkAll(lockPath, type);
   }).on('error', error => console.log(`Watcher error: ${error}`));
 }
 
-dependency.prototype.watchFileChange = function() {
+/**
+ * @method startToWatch
+ */
+function startToWatch() {
   // 监听package-lock.json的变化
-  this.watch(packageLockJsonPath, TYPE_MAPPING.PACKAGE_LOCK);
-
+  watch(packageLockJsonPath, TYPE_MAPPING.PACKAGE_LOCK);
   // 监听yarn.lock的变化
-  this.watch(yarnLockPath, TYPE_MAPPING.YARN_LOCK);
+  watch(yarnLockPath, TYPE_MAPPING.YARN_LOCK);
 }
 
-dependency.prototype.checkAll = function(lockPath, type) {
-  console.log('this.checkAll');
-  const allDependencies = this.getAllDependencies(lockPath, type);
-  this.checkIdentical(allDependencies, type);
+
+/**
+ * @method checkAll
+ * @param lockPath {string} lock file path
+ * @param type {string} package-lock.json or yarn.lock
+ */
+function checkAll(lockPath, type) {
+  const allDependencies = getAllDependencies(lockPath, type);
+  checkIdentical(allDependencies, type);
 }
 
-// 不管是yarn.lock还是package-lock.json都统一成package-lock.json处理
-dependency.prototype.unifiedToPackageLock = function(lockPath, type) {
+/**
+ * @method unifiedToPackageLock
+ * @param lockPath {string} lock file path
+ * @param type {string} package-lock.json or yarn.lock
+ * @return {Object} lock file in JSON format
+ */
+function unifiedToPackageLock(lockPath, type) {
   let data = {};
 
   if (type === TYPE_MAPPING.PACKAGE_LOCK) {
@@ -75,21 +92,24 @@ dependency.prototype.unifiedToPackageLock = function(lockPath, type) {
   return data;
 }
 
-dependency.prototype.getAllDependencies = function(lockPath, type) {
+/**
+ * @method getAllDependencies
+ * @param lockPath {string} lock file path
+ * @param type {string} package-lock.json or yarn.lock
+ * @return {Array} dependencies array
+ */
+function getAllDependencies(lockPath, type) {
   // 当前目录下有package.json, package-lock.json, node_modules才会进行检查
   const allDependenciesArr = [];
 
   const isExist = fs.existsSync(jsonPath) &&
     fs.existsSync(lockPath) &&
     fs.existsSync(modulePath);
-
   if (!isExist) {
     return allDependenciesArr;
   }
-
   let json = transferPathToJson(jsonPath);
-  let lockJson = this.unifiedToPackageLock(lockPath, type);
-
+  let lockJson = unifiedToPackageLock(lockPath, type);
   // 在package-lock.json中找到package.json对应的版本
   const { dependencies = {}, devDependencies = {} } = json;
   const { dependencies: lockDependencies = {} } = lockJson;
@@ -103,8 +123,13 @@ dependency.prototype.getAllDependencies = function(lockPath, type) {
   return allDependenciesArr;
 }
 
-dependency.prototype.checkIdentical = function(allDependencies, type) {
-  const errorMessages = [];
+/**
+ * @method checkIdentical
+ * @param lockPath {string} lock file path
+ * @param type {string} package-lock.json or yarn.lock
+ */
+function checkIdentical(allDependencies, type) {
+  const messages = [];
   allDependencies.forEach(item => {
     const { name, version } = item;
     const itemModulePath = `${ROOT_PATH}/node_modules/${name}/package.json`;
@@ -118,7 +143,7 @@ dependency.prototype.checkIdentical = function(allDependencies, type) {
     }
   
     if (!isEqual) {
-      errorMessages.push({
+      messages.push({
         name,
         shouldInstallVersion: version,
         actualInsallVersion: itemModuleJson.version,
@@ -126,12 +151,50 @@ dependency.prototype.checkIdentical = function(allDependencies, type) {
       })
     }
   })
-  errorMessages.length && errorMessages.forEach(d => {
-    vscode.window.showInformationMessage(d.message, '与lock同步', '忽略').then(select => {
-      console.log(d, select)
-    });
+  messages.length && messages.forEach((d, index) => {
+    if (index === messages.length - 1) {
+      const UPDATE_TEXT = `将所有包更新至${type}文件中定义的版本`;
+      vscode.window.showWarningMessage(d.message, UPDATE_TEXT, '忽略').then(select => {
+        if (select === UPDATE_TEXT) {
+          updateVersion(type)
+        }
+      });
+      return
+    }
+    vscode.window.showWarningMessage(d.message);
   })
 }
 
+/**
+ * @method updateVersion
+ * @param type {string} package-lock.json or yarn.lock
+ */
+function updateVersion(type) {
+  let script = '';
+  if (type === TYPE_MAPPING.PACKAGE_LOCK) {
+    script = NPM_UPDATE_SCRIPT;
+  }
+  if (type === TYPE_MAPPING.YARN_LOCK) {
+    script = YARN_UPDATE_SCRIPT;
+  }
+  exec(script, { cwd: ROOT_PATH }, (err, stdout) => {
+    if (err) {
+      vscode.window.showErrorMessage('同步失败请手动尝试')
+      console.error(err);
+      return;
+    }
+    console.log(stdout);
+    vscode.window.showInformationMessage(`所有包已更新至${type}文件中定义的版本`);
+    checkAll(packageLockJsonPath, type);
+  });
+}
+
+const dependency = function() {}
+
+dependency.prototype.init = function() {
+  checkAll(packageLockJsonPath, TYPE_MAPPING.PACKAGE_LOCK);
+  checkAll(yarnLockPath, TYPE_MAPPING.YARN_LOCK);
+  startToWatch();
+}
 
 module.exports = dependency;

@@ -3,7 +3,12 @@ const TYPE_MAPPING = {
   YARN_LOCK: 'yarn.lock'
 }
 
+const NPM_UPDATE_SCRIPT = 'npm install';
+
+const YARN_UPDATE_SCRIPT = 'yarn';
 
 module.exports = {
-  TYPE_MAPPING
+  TYPE_MAPPING,
+  NPM_UPDATE_SCRIPT,
+  YARN_UPDATE_SCRIPT,
 }
