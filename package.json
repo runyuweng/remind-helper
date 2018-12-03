@@ -19,7 +19,7 @@
         "commands": [
             {
                 "command": "extension.check",
-                "title": "check now"
+                "title": "check"
             }
         ]
     },
