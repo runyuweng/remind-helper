@@ -14,3 +14,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ### Added
 - Check if the local installed package is consistent with that in yarn.lock.
 - After GIT operation will auto check whether the current branch has merged the latest master branch.
+
+## [0.0.8] - 2018-12-03
+### Changed
+- Use lodash.debounce to handle check event.
