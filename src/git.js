@@ -1,7 +1,7 @@
 
 const vscode = require('vscode');
 const chokidar = require('chokidar');
-const _ = require('lodash')
+const _ = require('lodash');
 const simpleGit = require('simple-git')(vscode.workspace.rootPath);
 const ROOT_PATH = vscode.workspace.rootPath;
 

@@ -1,7 +1,8 @@
 const vscode = require('vscode');
-const semver = require('semver')
+const semver = require('semver');
 const fs = require('fs');
 const chokidar = require('chokidar');
+const _ = require('lodash');
 const lockfile = require('@yarnpkg/lockfile');
 const {
   TYPE_MAPPING
@@ -13,6 +14,8 @@ const jsonPath = ROOT_PATH + '/package.json';
 const packageLockJsonPath = ROOT_PATH + '/package-lock.json';
 const yarnLockPath = ROOT_PATH + '/yarn.lock';
 const modulePath = ROOT_PATH + '/node_modules';
+
+const debounceCheck = _.debounce(checkAll, 100);
 
 /**
  * @method transferPathToJson
@@ -41,7 +44,7 @@ function watch(lockPath, type) {
   ], {
     ignoreInitial: true,
   }).on('all', () => {
-    checkAll(lockPath, type);
+    debounceCheck(lockPath, type);
   }).on('error', error => console.log(`Watcher error: ${error}`));
 }
 
