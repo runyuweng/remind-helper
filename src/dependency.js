@@ -70,9 +70,10 @@ function checkAll(lockPath, type) {
  * @method unifiedToPackageLock
  * @param lockPath {string} lock file path
  * @param type {string} package-lock.json or yarn.lock
+ * @param json {json} package.json file in JSON format
  * @return {Object} lock file in JSON format
  */
-function unifiedToPackageLock(lockPath, type) {
+function unifiedToPackageLock(lockPath, type, json) {
   let data = {};
 
   if (type === TYPE_MAPPING.PACKAGE_LOCK) {
@@ -86,7 +87,7 @@ function unifiedToPackageLock(lockPath, type) {
       const key = d.replace(/(.*)(@.*)$/, '$1');
       const versionRangeInName = d.match(/(.*@)(.*)$/)[2];
       let versionInName;
-      // yarn.lock中可能一个包出现多次，这种情况选用较低的一个版本
+      // 记录下prop-types@^15.5.0这个title中的版本 可能title中的版本低但是version中定义的高
       // '>=4.0.3 <5.0.0' || '>=0.5.0 >=0.0.0 <1.0.0'
       if (semver.validRange(versionRangeInName).match(/^>=(.+?) .*/)) {
         versionInName = semver.validRange(versionRangeInName).match(/^>=(.+?) .*/)[1];
@@ -97,12 +98,15 @@ function unifiedToPackageLock(lockPath, type) {
       } else {
         versionInName = versionRangeInName;
       }
-      if (dependencies[key]) {
-        if (semver.lt(versionInName, dependencies[key].versionInName)) {
+      // yarn.lock中可能一个包出现多次，这种情况选用满足package.json中定义的版本且较低的一个版本
+      if (json[key] && semver.satisfies(object[d].version, semver.validRange(json[key]))) {
+        if (dependencies[key]) {
+          if (semver.lt(versionInName, dependencies[key].versionInName)) {
+            dependencies[key] = Object.assign(object[d], { versionInName });
+          }
+        } else {
           dependencies[key] = Object.assign(object[d], { versionInName })
         }
-      } else {
-        dependencies[key] = Object.assign(object[d], { versionInName })
       }
     });
     data.dependencies = dependencies;
@@ -128,11 +132,11 @@ function getAllDependencies(lockPath, type) {
     return allDependenciesArr;
   }
   let json = transferPathToJson(jsonPath);
-  let lockJson = unifiedToPackageLock(lockPath, type);
   // 在package-lock.json中找到package.json对应的版本
   const { dependencies = {}, devDependencies = {} } = json;
-  const { dependencies: lockDependencies = {} } = lockJson;
   const allDependenciesObj = Object.assign(devDependencies, dependencies);
+  let lockJson = unifiedToPackageLock(lockPath, type, allDependenciesObj);
+  const { dependencies: lockDependencies = {} } = lockJson;
   Object.keys(allDependenciesObj).forEach(d => {
     allDependenciesArr.push({
       name: d,
