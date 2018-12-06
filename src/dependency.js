@@ -162,6 +162,13 @@ function checkIdentical(allDependencies, type) {
     let itemModuleJson = transferPathToJson(itemModulePath);
     let isEqual = false;
 
+    if (!itemModuleJson.version) {
+      messages.push({
+        message: `${name} 包在 ${type} 文件中的版本为 ${version} 但本地未安装`,
+      })
+      return;
+    }
+
     try {
       isEqual = semver.eq(itemModuleJson.version, version);
     } catch (err) {
@@ -170,9 +177,6 @@ function checkIdentical(allDependencies, type) {
   
     if (!isEqual) {
       messages.push({
-        name,
-        shouldInstallVersion: version,
-        actualInsallVersion: itemModuleJson.version,
         message: `${name} 包在 ${type} 文件中的版本为 ${version} 与 node_modules 中实际安装的 ${itemModuleJson.version} 版本不一致`,
       })
     }
