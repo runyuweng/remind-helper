@@ -28,18 +28,18 @@
         "test": "node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
-        "typescript": "^2.6.1",
-        "vscode": "^1.1.21",
-        "eslint": "^4.11.0",
-        "@types/node": "^8.10.25",
-        "@types/mocha": "^2.2.42"
+        "@types/mocha": "^5.2.7",
+        "@types/node": "^12.0.10",
+        "eslint": "^6.0.0",
+        "typescript": "^3.5.2",
+        "vscode": "^1.1.34"
     },
     "dependencies": {
         "@yarnpkg/lockfile": "^1.1.0",
-        "chokidar": "^2.0.4",
+        "chokidar": "^3.0.1",
         "lodash": "^4.17.11",
-        "semver": "^5.6.0",
-        "simple-git": "^1.107.0"
+        "semver": "^6.1.2",
+        "simple-git": "^1.116.0"
     },
     "repository": {
         "type": "git",
